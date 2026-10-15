@@ -21,11 +21,17 @@
     </div>
     <span class="status" id="status" role="status"></span>
     <div class="actions">
-      <button type="button" class="btn" id="import-btn">Import</button>
-      <button type="button" class="btn" id="export-btn">Export</button>
-      <button type="button" class="btn primary" id="pdf-btn">Download PDF</button>
+      <div class="more">
+        <button type="button" class="btn more-toggle" id="more-btn" aria-expanded="false" aria-controls="more-menu" aria-label="More actions"></button>
+        <div class="more-menu" id="more-menu">
+          <button type="button" class="btn" id="import-btn">Import</button>
+          <button type="button" class="btn" id="export-btn">Export</button>
+        </div>
+      </div>
+      <button type="button" class="btn primary" id="pdf-btn"><span class="pdf-long">Download </span>PDF</button>
     </div>
   </header>
+  <div class="toast" id="toast" aria-hidden="true"></div>
   <p class="embed-note" id="embed-note" hidden>Download PDF and Export work when you open the site directly. In this preview you can edit, customise and import.</p>
 
   <div class="workspace">

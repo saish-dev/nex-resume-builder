@@ -548,30 +548,107 @@ button { font: inherit; color: inherit; }
 .r-c-title { font-weight: 600; }
 .r-c-sub { font-size: 0.94em; color: var(--r-muted); }
 
-/* ---------- Phones and narrow windows ---------- */
+/* Overflow menu: inline on wide screens, a popover on phones */
+.more { position: relative; }
+.more-toggle { display: none; }
+.more-menu { display: flex; gap: 8px; }
+.toast { display: none; }
+
+/* ---------- Phones and narrow windows ----------
+   The page scrolls as a whole (so mobile browser bars can collapse), the
+   top bar sticks, and the panel switcher becomes a bottom tab bar. */
 @media (max-width: 900px) {
-  .workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  html, body { height: auto; }
+  .app { display: block; height: auto; }
+
+  .topbar {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+    flex-wrap: nowrap; padding-block: 8px;
+  }
+  .status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .actions { margin-left: auto; flex-wrap: nowrap; }
+  .more-toggle { display: grid; place-items: center; width: 40px; height: 40px; padding: 0; }
+  .more-menu {
+    display: none;
+    position: absolute; right: 0; top: calc(100% + 6px); z-index: 30;
+    flex-direction: column; gap: 2px; min-width: 170px; padding: 6px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(16, 24, 40, 0.18);
+  }
+  .more-menu.open { display: flex; }
+  .more-menu .btn { width: 100%; min-height: 44px; justify-content: flex-start; border-color: transparent; font-size: 15px; }
+  .btn { min-height: 40px; }
+
+  .workspace { display: block; }
   .rail {
-    flex-direction: row; justify-content: center;
-    padding-block: 6px;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    flex-direction: row; justify-content: space-around; gap: 4px;
+    padding-top: 6px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+    border-right: 0; border-top: 1px solid var(--line);
+    box-shadow: 0 -2px 12px rgba(16, 24, 40, 0.06);
+  }
+  .rail-btn { flex: 1; width: auto; min-height: 52px; padding: 6px 4px; }
+  .rail-preview { display: grid; }
+
+  .side-panel { overflow: visible; border-right: 0; }
+  .panel {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
-    border-right: 0; border-bottom: 1px solid var(--line);
   }
-  .rail-btn { flex: 1; max-width: 150px; width: auto; grid-auto-flow: column; align-items: center; gap: 6px; padding: 8px; font-size: 13px; }
-  .rail-preview { display: grid; }
-  .side-panel { border-right: 0; }
-  .panel { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .preview-pane { display: block; }
   .app[data-mobile-preview="true"] .side-panel, .app[data-mobile-preview="false"] .preview-pane { display: none; }
-  .preview-bar, .stage { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-  .status { order: 5; width: 100%; margin-left: 0; }
-  .actions { margin-left: auto; }
+  .preview-bar { flex-wrap: nowrap; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  #paper-label { display: none; }
+  .stage {
+    overflow-x: auto; overflow-y: visible;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  /* 16px text stops iOS from zooming into fields; bigger tap targets */
+  .field input, .rte-area { font-size: 16px; }
+  .icon-btn { width: 40px; height: 40px; }
+  .handle { width: 32px; height: 40px; }
+  .rte-bar button { width: 40px; height: 36px; }
+  .zoom button { min-width: 40px; height: 36px; }
+  .add-entry { min-height: 44px; }
+  .toggle { min-height: 36px; }
+  .mini-seg label { padding: 9px 12px; }
+
+  .toast {
+    display: block;
+    position: fixed; left: 50%; z-index: 40;
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100% - 32px);
+    padding: 10px 14px; border-radius: 10px;
+    background: var(--ink); color: var(--bg);
+    font-size: 13.5px;
+    transform: translate(-50%, 8px); opacity: 0; pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Add content becomes a bottom sheet */
+  .add-dialog {
+    width: 100%; max-width: 100%; max-height: 88dvh;
+    margin: auto 0 0; border-radius: 18px 18px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .type-grid { grid-template-columns: minmax(0, 1fr); padding-inline: 16px; }
 }
 @media (max-width: 480px) {
-  .grid, .toggles { grid-template-columns: minmax(0, 1fr); }
+  .grid > .field:not(.pair) { grid-column: 1 / -1; }
+  .toggles { grid-template-columns: minmax(0, 1fr); }
   .tpl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .brand-name { font-size: 17px; }
-  .btn { padding: 7px 10px; }
+  .pdf-long { display: none; }
+  .card-body { padding-inline: 12px; }
+  .entry-form { padding: 12px 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -580,7 +657,7 @@ button { font: inherit; color: inherit; }
 /* ---------- Print: only the sheet ---------- */
 @media print {
   html, body { height: auto; background: #ffffff; }
-  .topbar, .embed-note, .rail, .side-panel, .preview-bar, #breaks, .add-dialog { display: none !important; }
+  .topbar, .embed-note, .rail, .side-panel, .preview-bar, #breaks, .add-dialog, .toast { display: none !important; }
   .app, .workspace, .app .preview-pane, .stage { display: block !important; height: auto; overflow: visible; padding: 0; background: #ffffff; }
   .sheet-frame { width: auto !important; height: auto !important; }
   .sheet-scale { position: static; transform: none !important; width: auto !important; }

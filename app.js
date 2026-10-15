@@ -317,7 +317,8 @@
 
   // ---------- elements ----------
   const els = {
-    app: $('app'), rail: $('rail'), content: $('panel-content'), customize: $('panel-customize'),
+    app: $('app'), rail: $('rail'), sidePanel: $('side-panel'), content: $('panel-content'), customize: $('panel-customize'),
+    moreBtn: $('more-btn'), moreMenu: $('more-menu'), toast: $('toast'),
     resume: $('resume'), breaks: $('breaks'), frame: $('sheet-frame'), scale: $('sheet-scale'), stage: $('stage'),
     pages: $('page-count'), pageHint: $('page-hint'), paperLabel: $('paper-label'), status: $('status'),
     embedNote: $('embed-note'), pageStyle: $('page-style'),
@@ -343,7 +344,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       setStatus('Saved in this browser');
     } catch {
-      setStatus('Not saved: this browser blocks storage. Use Export to keep a copy.');
+      setStatus('Not saved: this browser blocks storage. Use Export to keep a copy.', true);
     }
   }
   function queueSave() {
@@ -351,7 +352,17 @@
     setStatus('Saving…');
     saveTimer = setTimeout(save, 400);
   }
-  function setStatus(text) { els.status.textContent = text; }
+  // The status line is always updated; on phones, `notify` also shows a toast
+  // because the status line is hidden there.
+  let toastTimer = null;
+  function setStatus(text, notify = false) {
+    els.status.textContent = text;
+    if (!notify) return;
+    els.toast.textContent = text;
+    els.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => els.toast.classList.remove('show'), 3200);
+  }
 
   const restored = load();
   let state = restored || makeSample();
@@ -392,6 +403,7 @@
       b.setAttribute('aria-pressed', String(on));
     });
     if (ui.mobilePreview) requestAnimationFrame(fit);
+    if (getComputedStyle(els.sidePanel).overflowY === 'visible') window.scrollTo(0, 0);
   }
   els.rail.addEventListener('click', (e) => {
     const b = e.target.closest('.rail-btn');
@@ -399,8 +411,8 @@
   });
 
   // ---------- content panel ----------
-  function inputField(id, label, value, attrs, { wide = false, type = 'text', ph = '', auto = 'off' } = {}) {
-    return `<div class="field${wide ? ' wide' : ''}"><label for="${id}">${esc(label)}</label>` +
+  function inputField(id, label, value, attrs, { wide = false, pair = false, type = 'text', ph = '', auto = 'off' } = {}) {
+    return `<div class="field${wide ? ' wide' : ''}${pair ? ' pair' : ''}"><label for="${id}">${esc(label)}</label>` +
       `<input type="${type}" id="${id}" name="${id}" value="${esc(value)}" autocomplete="${auto}"${ph ? ` placeholder="${esc(ph)}"` : ''} ${attrs}></div>`;
   }
 
@@ -460,7 +472,7 @@
     const field = (key) => {
       const wide = key === 'title' || key === 'link' || (key === 'subtitle' && !L.location) || (t.kind === 'compact');
       return inputField(`e-${e.id}-${key}`, L[key], e[key], `data-entry-key="${key}"`, {
-        wide, ph: t.ph[key] || (key === 'end' && L.start ? 'Present' : ''),
+        wide, pair: (key === 'start' || key === 'end') && L.start && L.end, ph: t.ph[key] || (key === 'end' && L.start ? 'Present' : ''),
       });
     };
     const fields = ENTRY_KEYS.filter((k) => k !== 'body' && L[k]).map(field).join('');
@@ -587,7 +599,7 @@
       case 'delete-sec':
         state.sections = state.sections.filter((s) => s !== sec);
         markEdited();
-        setStatus(`Deleted ${sec.title}`);
+        setStatus(`Deleted ${sec.title}`, true);
         commit({ content: true, customize: ui.panel === 'customize' });
         return;
       case 'toggle-entry':
@@ -612,7 +624,7 @@
       case 'delete-entry':
         sec.entries = sec.entries.filter((x) => x !== entry);
         markEdited();
-        setStatus(`Deleted ${entry.title || 'entry'}`);
+        setStatus(`Deleted ${entry.title || 'entry'}`, true);
         commit({ content: true });
         return;
       case 'open-add':
@@ -627,11 +639,11 @@
         return;
       case 'start-blank':
         replaceState(makeBlank());
-        setStatus('Started a blank résumé');
+        setStatus('Started a blank résumé', true);
         return;
       case 'restore-sample':
         replaceState(makeSample());
-        setStatus('Sample restored');
+        setStatus('Sample restored', true);
         return;
     }
   });
@@ -697,6 +709,11 @@
   els.content.addEventListener('pointermove', (e) => {
     if (!drag) return;
     const { item, list } = drag;
+    // Scroll the panel (or the page, on phones) when dragging near an edge.
+    const scroller = getComputedStyle(els.sidePanel).overflowY === 'visible' ? document.scrollingElement : els.sidePanel;
+    const box = scroller === els.sidePanel ? els.sidePanel.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+    if (e.clientY < box.top + 90) scroller.scrollBy(0, -14);
+    else if (e.clientY > box.bottom - 110) scroller.scrollBy(0, 14);
     const next = [...list.children].find((c) => c !== item && e.clientY < c.getBoundingClientRect().top + c.offsetHeight / 2);
     if (next) { if (item.nextElementSibling !== next) list.insertBefore(item, next); }
     else if (list.lastElementChild !== item) list.append(item);
@@ -752,8 +769,10 @@
   // ---------- add content dialog ----------
   function openAddDialog() {
     const have = new Set(state.sections.map((s) => s.type));
-    els.typeGrid.innerHTML = Object.entries(TYPES).map(([type, t]) => {
-      const taken = have.has(type) && !t.multiple;
+    const isTaken = ([type, t]) => have.has(type) && !t.multiple;
+    const entries = Object.entries(TYPES);
+    els.typeGrid.innerHTML = [...entries.filter((x) => !isTaken(x)), ...entries.filter(isTaken)].map(([type, t]) => {
+      const taken = isTaken([type, t]);
       return `<button type="button" class="type-btn" data-add-type="${type}"${taken ? ' disabled' : ''}>
         <span class="card-icon">${icon(t.icon)}</span>
         <span><span class="type-name">${esc(t.label)}</span><span class="type-desc">${taken ? 'Already on your résumé' : esc(t.desc)}</span></span>
@@ -786,7 +805,7 @@
     const card = els.content.querySelector(`[data-sec-id="${sec.id}"]`);
     card.scrollIntoView({ block: 'start', behavior: 'smooth' });
     (card.querySelector('.entry-form input') || card.querySelector('.rte-area'))?.focus({ preventScroll: true });
-    setStatus(`Added ${TYPES[type].label}`);
+    setStatus(`Added ${TYPES[type].label}`, true);
   });
 
   // ---------- photo ----------
@@ -794,7 +813,7 @@
     const file = els.photoFile.files[0];
     els.photoFile.value = '';
     if (!file) return;
-    if (!/^image\//.test(file.type)) { setStatus(`${file.name} isn't an image. Choose a JPG or PNG.`); return; }
+    if (!/^image\//.test(file.type)) { setStatus(`${file.name} isn't an image. Choose a JPG or PNG.`, true); return; }
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
@@ -807,9 +826,9 @@
       state.personal.photo = canvas.toDataURL('image/jpeg', 0.86);
       markEdited();
       commit({ content: true });
-      setStatus('Photo added');
+      setStatus('Photo added', true);
     };
-    img.onerror = () => { URL.revokeObjectURL(url); setStatus(`Couldn't read ${file.name}. Try a JPG or PNG.`); };
+    img.onerror = () => { URL.revokeObjectURL(url); setStatus(`Couldn't read ${file.name}. Try a JPG or PNG.`, true); };
     img.src = url;
   });
 
@@ -916,7 +935,7 @@
     Object.assign(state.design, TEMPLATE_BASE, tp.design, { template: tp.id });
     for (const s of state.sections) s.column = TYPES[s.type].column;
     commit({ customize: true });
-    setStatus(`Applied the ${tp.name} template`);
+    setStatus(`Applied the ${tp.name} template`, true);
   });
 
   els.customize.addEventListener('input', (e) => {
@@ -1057,6 +1076,18 @@
   else window.addEventListener('resize', fit);
 
   // ---------- toolbar ----------
+  els.moreBtn.innerHTML = icon('more', 20);
+  const setMore = (open) => {
+    els.moreMenu.classList.toggle('open', open);
+    els.moreBtn.setAttribute('aria-expanded', String(open));
+  };
+  els.moreBtn.addEventListener('click', () => setMore(!els.moreMenu.classList.contains('open')));
+  els.moreMenu.addEventListener('click', (e) => { if (e.target.closest('button')) setMore(false); });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.more')) setMore(false); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && els.moreMenu.classList.contains('open')) { setMore(false); els.moreBtn.focus(); }
+  });
+
   let embedded = false;
   try { embedded = window.self !== window.top; } catch { embedded = true; }
   if (embedded) {
@@ -1067,7 +1098,7 @@
   }
 
   els.pdfBtn.addEventListener('click', () => {
-    setStatus('In the print dialog, choose “Save as PDF”');
+    setStatus('In the print dialog, choose “Save as PDF”', true);
     window.print();
   });
 
@@ -1081,7 +1112,7 @@
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    setStatus(`Exported ${a.download}`);
+    setStatus(`Exported ${a.download}`, true);
   });
 
   els.importBtn.addEventListener('click', () => els.importFile.click());
@@ -1094,14 +1125,14 @@
       let next = null;
       try { next = normalize(JSON.parse(reader.result)); } catch { next = null; }
       if (!next) {
-        setStatus(`Couldn't read ${file.name}. Choose a .json file exported from Nex Resume.`);
+        setStatus(`Couldn't read ${file.name}. Choose a .json file exported from Nex Resume.`, true);
         return;
       }
       next.sample = false;
       replaceState(next);
-      setStatus(`Imported ${file.name}`);
+      setStatus(`Imported ${file.name}`, true);
     };
-    reader.onerror = () => setStatus(`Couldn't open ${file.name}.`);
+    reader.onerror = () => setStatus(`Couldn't open ${file.name}.`, true);
     reader.readAsText(file);
   });
 
