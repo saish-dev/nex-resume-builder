@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nex Resume</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Write your résumé once, pick a template, and save it as a print-ready PDF.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Manrope:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app" id="app" data-view="edit">
+  <header class="topbar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">N</span>
+      <span class="brand-name">Nex Resume</span>
+    </div>
+    <div class="tabs" aria-label="View">
+      <button type="button" class="tab" id="tab-edit" data-view="edit" aria-pressed="true">Edit</button>
+      <button type="button" class="tab" id="tab-preview" data-view="preview" aria-pressed="false">Preview</button>
+    </div>
+    <div class="actions">
+      <span class="status" id="status" role="status"></span>
+      <button type="button" class="btn" id="import-btn">Import JSON</button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
+      <button type="button" class="btn" id="export-btn">Export JSON</button>
+      <button type="button" class="btn primary" id="pdf-btn">Save as PDF</button>
+    </div>
+  </header>
+  <p class="embed-note" id="embed-note" hidden>Saving as PDF and exporting files work when you open the site directly. In this preview you can still edit, switch templates and import a file.</p>
+
+  <main class="workspace">
+    <aside class="editor-pane" aria-label="Résumé editor">
+      <p class="sample-note" id="sample-note" hidden>This is a sample résumé. Replace it with your own details. Changes save in this browser as you type.</p>
+
+      <div class="design-bar">
+        <div class="design-group">
+          <span class="group-label" id="tpl-label">Template</span>
+          <div class="seg" id="tpl-options" role="radiogroup" aria-labelledby="tpl-label"></div>
+        </div>
+        <div class="design-group">
+          <span class="group-label" id="accent-label">Accent</span>
+          <div class="swatches" id="accent-options" role="radiogroup" aria-labelledby="accent-label"></div>
+        </div>
+      </div>
+
+      <form id="editor" class="editor" novalidate></form>
+
+      <div class="editor-foot">
+        <button type="button" class="btn quiet" id="blank-btn">Start blank</button>
+        <button type="button" class="btn quiet" id="reset-btn">Restore sample</button>
+      </div>
+    </aside>
+
+    <section class="preview-pane" aria-label="Live preview">
+      <div class="preview-meta">
+        <span class="chip" id="page-count">1 page</span>
+        <span class="meta">US Letter · 8.5 × 11 in</span>
+        <span class="meta hint-text" id="page-hint"></span>
+      </div>
+      <div class="stage" id="stage">
+        <div class="sheet-frame" id="sheet-frame">
+          <div class="sheet-scale" id="sheet-scale">
+            <article class="resume tpl-classic" id="resume"></article>
+            <div id="breaks" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
